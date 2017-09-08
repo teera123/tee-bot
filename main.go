@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,7 +71,7 @@ func botHandler(c *gin.Context) {
 func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMessage {
 	args := strings.Split(msg, " ")
 	command := strings.ToLower(args[0])
-	rtn := "ยังตอบไม่ได้อ่ะ เสียใจ T^T"
+	rtn := "ตอบไม่ได้อ่ะ เสียใจ T^T"
 
 	switch {
 	case strings.HasPrefix(command, "help"):
@@ -84,16 +85,51 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		}
 		rtn = fmt.Sprint("ค่าเงิน ", args[1], ": ", accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", "."))
 	case strings.HasPrefix(command, "setinterval"):
+		t, err := strconv.Atoi(args[2])
+		if err != nil {
+			rtn = "ส่งเวลาเป็นตัวเลขด้วยจ้าาาา"
+			goto ex
+		}
+
+		curr := strings.ToLower(args[2])
 		conn := rdPool.Get()
 		defer conn.Close()
 
-		if _, err := conn.Do("PING"); err != nil {
-			rtn = "ping redis ไม่ได้อ่ะ T^T"
-		} else {
-			rtn = "ping redis ได้แว้วววววว " + source.UserID
+		hkey := fmt.Sprintf("%s:%s", curr, source.UserID)
+		skey := fmt.Sprintf("%s:push", curr)
+
+		conn.Send("MULTI")
+		conn.Send("HMSET", hkey, "interval", t, "last_push", time.Now())
+		conn.Send("SADD", skey, hkey)
+		if _, err := conn.Do("EXEC"); err != nil {
+			rtn = "redis พังอ่ะ " + err.Error()
+			goto ex
+		}
+		rtn = "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED"
+	case strings.HasPrefix(command, "viewinterval"):
+		conn := rdPool.Get()
+		defer conn.Close()
+
+		key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
+		members, err := redis.Strings(conn.Do("SMEMBERS", key))
+		if err != nil {
+			rtn = "redis พังอ่ะ " + err.Error()
+			goto ex
+		}
+
+		for _, m := range members {
+			rtn += m + "\n"
+
+			vs, err := redis.Values(conn.Do("HMGET", m, "interval", "last_push"))
+			if err != nil {
+				rtn += "error จ้าาาา " + err.Error()
+				continue
+			}
+			fmt.Println(vs)
 		}
 	}
 
+ex:
 	return linebot.NewTextMessage(rtn)
 }
 
