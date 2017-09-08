@@ -143,7 +143,7 @@ func createRedisPool() *redis.Pool {
 		IdleTimeout: 5 * time.Second,
 		Wait:        true,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", os.Getenv("REDIS_URL"))
+			c, err := redis.Dial("tcp", fmt.Sprintf("[%s]", os.Getenv("REDIS_URL")))
 			if err != nil {
 				panic(err)
 			}
