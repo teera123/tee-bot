@@ -111,11 +111,14 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		defer conn.Close()
 
 		key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
+		fmt.Println("key:", key)
+
 		members, err := redis.Strings(conn.Do("SMEMBERS", key))
 		if err != nil {
 			rtn = "redis พังอ่ะ " + err.Error()
 			goto ex
 		}
+		fmt.Println("members:", members)
 
 		for _, m := range members {
 			rtn += m + "\n"
