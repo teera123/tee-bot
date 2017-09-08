@@ -57,14 +57,18 @@ func botHandler(c *gin.Context) {
 }
 
 func lineTextResponse(msg string) *linebot.TextMessage {
-	rtn := "ยังตอบไม่ได้อ่ะ"
-	if strings.Contains(msg, "current") {
-		cur, err := getBXCurrency("omg")
+	val := strings.Split(msg, " ")
+	rtn := "ยังตอบไม่ได้อ่ะ เสียใจ T^T"
+
+	switch {
+	case strings.HasPrefix(val[0], "curr"):
+		curr, err := getBXCurrency(val[1])
 		if err != nil {
 			rtn = "error เบย: " + err.Error()
 		}
-		rtn = fmt.Sprint("ค่าเงิน omg: ", cur.LastPrice)
+		rtn = fmt.Sprint("ค่าเงิน ", val[1], ": ", curr.LastPrice)
 	}
+
 	return linebot.NewTextMessage(rtn)
 }
 
