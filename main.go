@@ -25,7 +25,7 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Logger())
-	r.GET("/bot", botHandler)
+	r.POST("/bot", botHandler)
 
 	r.Run(":" + port)
 }
