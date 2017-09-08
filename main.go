@@ -95,44 +95,70 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		conn := rdPool.Get()
 		defer conn.Close()
 
-		hkey := fmt.Sprintf("%s:%s", curr, source.UserID)
-		skey := fmt.Sprintf("%s:push", curr)
+		hkey := fmt.Sprintf("%s:%s", source.UserID, curr)
+		skey := fmt.Sprintf("push:%s", curr)
 
 		conn.Send("MULTI")
 		conn.Send("HMSET", hkey, "interval", t, "last_push", time.Now())
 		conn.Send("SADD", skey, hkey)
-		reply, err := conn.Do("EXEC")
-		if err != nil {
+		if _, err := conn.Do("EXEC"); err != nil {
 			rtn = "redis พังอ่ะ " + err.Error()
 			goto ex
 		}
-		fmt.Println("reply:", reply, skey, hkey)
-
 		rtn = "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED"
 	case strings.HasPrefix(command, "viewinterval"):
 		conn := rdPool.Get()
 		defer conn.Close()
 
-		key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
-		fmt.Println("key:", key)
+		iter, key := 0, fmt.Sprintf("%s:*", source.UserID)
+		var keys []string
+		for {
+			if arr, err := redis.Values(conn.Do("HSCAN", iter, "MATCH", key)); err == nil {
+				iter, _ = redis.Int(arr[0], nil)
+				vals, _ := redis.Strings(arr[1], nil)
 
-		members, err := redis.Strings(conn.Do("SMEMBERS", key))
-		if err != nil {
-			rtn = "redis พังอ่ะ " + err.Error()
+				keys = append(keys, vals...)
+			}
+			if iter == 0 {
+				break
+			}
+		}
+		fmt.Println(keys)
+		rtn = "สำเร็จจจจจ"
+
+		//key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
+		//fmt.Println("key:", key)
+		//
+		//members, err := redis.Strings(conn.Do("SMEMBERS", key))
+		//if err != nil {
+		//	rtn = "redis พังอ่ะ " + err.Error()
+		//	goto ex
+		//}
+		//fmt.Println("members:", members)
+		//
+		//for _, m := range members {
+		//	rtn = m + "\n"
+		//
+		//	vs, err := redis.Values(conn.Do("HMGET", m, "interval", "last_push"))
+		//	if err != nil {
+		//		rtn += "error จ้าาาา " + err.Error()
+		//		continue
+		//	}
+		//	fmt.Println(vs)
+		//}
+	case command == "flushall":
+		if source.UserID != os.Getenv("ADMIN_TOKEN") {
+			rtn = "ไม่ให้ทำหรอก ชิชิ"
 			goto ex
 		}
-		fmt.Println("members:", members)
 
-		for _, m := range members {
-			rtn += m + "\n"
+		conn := rdPool.Get()
+		defer conn.Close()
 
-			vs, err := redis.Values(conn.Do("HMGET", m, "interval", "last_push"))
-			if err != nil {
-				rtn += "error จ้าาาา " + err.Error()
-				continue
-			}
-			fmt.Println(vs)
+		if _, err := conn.Do("FLUSHALL"); err != nil {
+			rtn = "ลบไม่ได้จ้าาาา = = " + err.Error()
 		}
+		rtn = "ลบข้อมูลแล้วนะ ลาก่อยยยยย"
 	}
 
 ex:
