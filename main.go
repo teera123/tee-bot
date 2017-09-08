@@ -101,11 +101,12 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		conn.Send("MULTI")
 		conn.Send("HMSET", hkey, "interval", t, "last_push", time.Now())
 		conn.Send("SADD", skey, hkey)
-		if _, err := conn.Do("EXEC"); err != nil {
+		reply, err := redis.String(conn.Do("EXEC"))
+		if err != nil {
 			rtn = "redis พังอ่ะ " + err.Error()
 			goto ex
 		}
-		rtn = "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED"
+		rtn = "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED " + reply
 	case strings.HasPrefix(command, "viewinterval"):
 		conn := rdPool.Get()
 		defer conn.Close()
