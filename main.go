@@ -113,7 +113,7 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		iter, key := 0, fmt.Sprintf("%s:*", source.UserID)
 		var keys []string
 		for {
-			if arr, err := redis.Values(conn.Do("HSCAN", iter, "MATCH", key)); err == nil {
+			if arr, err := redis.Values(conn.Do("SCAN", iter, "MATCH", key)); err == nil {
 				iter, _ = redis.Int(arr[0], nil)
 				vals, _ := redis.Strings(arr[1], nil)
 
