@@ -99,7 +99,7 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		skey := fmt.Sprintf("push:%s", curr)
 
 		conn.Send("MULTI")
-		conn.Send("HMSET", hkey, "interval", t, "last_push", time.Now())
+		conn.Send("HMSET", hkey, "currency", curr, "interval", t, "last_push", time.Now())
 		conn.Send("SADD", skey, hkey)
 		if _, err := conn.Do("EXEC"); err != nil {
 			rtn = "redis พังอ่ะ " + err.Error()
@@ -110,7 +110,8 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		conn := rdPool.Get()
 		defer conn.Close()
 
-		iter, key := 0, fmt.Sprintf("%s:*", source.UserID)
+		iter := 0
+		key := fmt.Sprintf("%s:*", source.UserID)
 		var keys []string
 		for {
 			if arr, err := redis.Values(conn.Do("SCAN", iter, "MATCH", key)); err == nil {
@@ -123,8 +124,18 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 				break
 			}
 		}
-		fmt.Println(keys)
-		rtn = "สำเร็จจจจจ"
+
+		rtn = "ท่านตั้งค่า interval ดังนี้...\n"
+		for _, k := range keys {
+			vs, err := redis.Values(conn.Do("HMGET", k, "currency", "interval"))
+			if err != nil {
+				rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+				continue
+			}
+			rtn += fmt.Sprintf("ค่าเงิน: %s\n", vs[0].(string))
+			rtn += fmt.Sprintf("ยิงเมื่อ: %d นาที\n", vs[1].(int))
+			rtn += "============\n"
+		}
 
 		//key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
 		//fmt.Println("key:", key)
