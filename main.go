@@ -7,15 +7,18 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/leekchan/accounting"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
 var (
-	bot   *linebot.Client
-	bxAPI = "https://bx.in.th/api/"
+	bot    *linebot.Client
+	rdPool *redis.Pool
+	bxAPI  = "https://bx.in.th/api/"
 )
 
 func main() {
@@ -24,6 +27,8 @@ func main() {
 	if err != nil {
 		panic("cannot init line bot")
 	}
+
+	rdPool = createRedisPool()
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -49,9 +54,8 @@ func botHandler(c *gin.Context) {
 		if event.Type == linebot.EventTypeMessage {
 			switch msg := event.Message.(type) {
 			case *linebot.TextMessage:
-				fmt.Println("reply token:", event.ReplyToken, msg.Text)
-
-				if _, err := bot.ReplyMessage(event.ReplyToken, lineTextResponse(msg.Text)).Do(); err != nil {
+				reply := lineTextResponse(msg.Text, event.Source)
+				if _, err := bot.ReplyMessage(event.ReplyToken, reply).Do(); err != nil {
 					log.Println("reply message error:", err)
 				}
 			}
@@ -59,7 +63,7 @@ func botHandler(c *gin.Context) {
 	}
 }
 
-func lineTextResponse(msg string) *linebot.TextMessage {
+func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMessage {
 	args := strings.Split(msg, " ")
 	command := strings.ToLower(args[0])
 	rtn := "ยังตอบไม่ได้อ่ะ เสียใจ T^T"
@@ -68,12 +72,22 @@ func lineTextResponse(msg string) *linebot.TextMessage {
 	case strings.HasPrefix(command, "help"):
 		rtn = "ทำแบบนี้ๆ\n"
 		rtn += "1. curr ${currency}"
+		rtn += "2. setinterval ${currency} ${minutes}"
 	case strings.HasPrefix(command, "curr"):
 		curr, err := getBXCurrency(args[1])
 		if err != nil {
 			rtn = "error เบย: " + err.Error()
 		}
 		rtn = fmt.Sprint("ค่าเงิน ", args[1], ": ", accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", "."))
+	case strings.HasPrefix(command, "setinterval"):
+		conn := rdPool.Get()
+		defer conn.Close()
+
+		if _, err := conn.Do("PING"); err != nil {
+			rtn = "ping redis ไม่ได้อ่ะ T^T"
+		} else {
+			rtn = "ping redis ได้แว้วววววว " + source.UserID
+		}
 	}
 
 	return linebot.NewTextMessage(rtn)
@@ -119,5 +133,28 @@ func parseCurrency(data map[string]interface{}) currency {
 		Change:            data["change"].(float64),
 		LastPrice:         data["last_price"].(float64),
 		Volume24Hours:     data["volume_24hours"].(float64),
+	}
+}
+
+func createRedisPool() *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     100,
+		MaxActive:   100,
+		IdleTimeout: 5 * time.Second,
+		Wait:        true,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", os.Getenv("REDIS_URL"))
+			if err != nil {
+				panic(err)
+			}
+			return c, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < 10*time.Second {
+				return nil
+			}
+			_, err := c.Do("PING")
+			return err
+		},
 	}
 }
