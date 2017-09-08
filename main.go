@@ -91,7 +91,7 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 			goto ex
 		}
 
-		curr := strings.ToLower(args[2])
+		curr := strings.ToLower(args[1])
 		conn := rdPool.Get()
 		defer conn.Close()
 
