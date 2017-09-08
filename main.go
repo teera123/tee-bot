@@ -63,8 +63,8 @@ func lineTextResponse(msg string) *linebot.TextMessage {
 
 	switch {
 	case strings.HasPrefix(command, "help"):
-		rtn = `ทำแบบนี้ๆ \n
-		1. curr ${currency}`
+		rtn = "ทำแบบนี้ๆ\n"
+		rtn += "1. curr ${currency}"
 	case strings.HasPrefix(command, "curr"):
 		curr, err := getBXCurrency(args[1])
 		if err != nil {
