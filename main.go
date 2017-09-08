@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/leekchan/accounting"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
@@ -70,7 +71,7 @@ func lineTextResponse(msg string) *linebot.TextMessage {
 		if err != nil {
 			rtn = "error เบย: " + err.Error()
 		}
-		rtn = fmt.Sprint("ค่าเงิน ", args[1], ": ", curr.LastPrice)
+		rtn = fmt.Sprint("ค่าเงิน ", args[1], ": ", accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", "."))
 	}
 
 	return linebot.NewTextMessage(rtn)

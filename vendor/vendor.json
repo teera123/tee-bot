@@ -9,6 +9,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "aVlhNufBqYv3vP3+3SmNtr4nDPo=",
+			"path": "github.com/cockroachdb/apd",
+			"revision": "03f0027e33b40ba581129ee237fc27068fa583e3",
+			"revisionTime": "2017-08-31T05:16:42Z"
+		},
+		{
 			"checksumSHA1": "QeKwBtN2df+j+4stw3bQJ6yO4EY=",
 			"path": "github.com/gin-contrib/sse",
 			"revision": "22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae",
@@ -51,6 +57,12 @@
 			"revisionTime": "2017-09-07T16:25:07Z"
 		},
 		{
+			"checksumSHA1": "3lmkOxEMd1f7nnaTT8jupYqlNgw=",
+			"path": "github.com/leekchan/accounting",
+			"revision": "68e54ba46cf7a77532354c6f4cc0fac3bfbe5095",
+			"revisionTime": "2017-07-19T05:38:29Z"
+		},
+		{
 			"checksumSHA1": "myiWgK0FGRJFpW6eI11GYXBorJY=",
 			"path": "github.com/line/line-bot-sdk-go/linebot",
 			"revision": "e4c6a4be124c74d5112c68804bf3cd27520e5a9d",
@@ -61,6 +73,12 @@
 			"path": "github.com/mattn/go-isatty",
 			"revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
 			"revisionTime": "2017-03-22T23:44:13Z"
+		},
+		{
+			"checksumSHA1": "rJab1YdNhQooDiBWNnt7TLWPyBU=",
+			"path": "github.com/pkg/errors",
+			"revision": "c605e284fe17294bda444b34710735b29d1a9d90",
+			"revisionTime": "2017-05-05T04:36:39Z"
 		},
 		{
 			"checksumSHA1": "0FCBLTqGOxgifAKfS0360iLTZR4=",
