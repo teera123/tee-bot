@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -28,7 +29,10 @@ func main() {
 		panic("cannot init line bot")
 	}
 
-	rdPool = createRedisPool()
+	rdPool, err = createRedisPool()
+	if err != nil {
+		panic("cannot connect redis")
+	}
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -136,25 +140,54 @@ func parseCurrency(data map[string]interface{}) currency {
 	}
 }
 
-func createRedisPool() *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:     100,
-		MaxActive:   100,
+// parseURL in the form of redis://h:<pwd>@ec2-23-23-129-214.compute-1.amazonaws.com:25219
+// and return the host and password
+func parseURL(us string) (string, string, error) {
+	u, err := url.Parse(us)
+	if err != nil {
+		return "", "", err
+	}
+
+	password := ""
+	if u.User != nil {
+		password, _ = u.User.Password()
+	}
+
+	host := "localhost"
+	if u.Host != "" {
+		host = u.Host
+	}
+	return host, password, nil
+}
+
+func createRedisPool() (*redis.Pool, error) {
+	h, p, err := parseURL(os.Getenv("REDIS_URL"))
+	if err != nil {
+		return nil, err
+	}
+	pool := &redis.Pool{
+		MaxIdle:     5,
 		IdleTimeout: 5 * time.Second,
-		Wait:        true,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", fmt.Sprintf("[%s]", os.Getenv("REDIS_URL")))
+			c, err := redis.Dial("tcp", h)
 			if err != nil {
-				panic(err)
+				return nil, err
+			}
+			if p != "" {
+				if _, err := c.Do("AUTH", p); err != nil {
+					c.Close()
+					return nil, err
+				}
 			}
 			return c, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			if time.Since(t) < 10*time.Second {
+			if time.Since(t) < time.Minute {
 				return nil
 			}
 			_, err := c.Do("PING")
 			return err
 		},
 	}
+	return pool, nil
 }
