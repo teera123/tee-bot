@@ -1,0 +1,441 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+func main() {
+	str := `{
+  "1": {
+    "pairing_id": 1,
+    "primary_currency": "THB",
+    "secondary_currency": "BTC",
+    "change": -0.04,
+    "last_price": 148489,
+    "volume_24hours": 512.25674176,
+    "orderbook": {
+      "bids": {
+        "total": 870,
+        "volume": 1448.82333173,
+        "highbid": 148489
+      },
+      "asks": {
+        "total": 1289,
+        "volume": 236.61458271,
+        "highbid": 148499.99
+      }
+    }
+  },
+  "2": {
+    "pairing_id": 2,
+    "primary_currency": "BTC",
+    "secondary_currency": "LTC",
+    "change": 0.18,
+    "last_price": 0.01743189,
+    "volume_24hours": 396.55880685,
+    "orderbook": {
+      "bids": {
+        "total": 51,
+        "volume": 1702.57436611,
+        "highbid": 0.01733
+      },
+      "asks": {
+        "total": 95,
+        "volume": 981.24316634,
+        "highbid": 0.01743189
+      }
+    }
+  },
+  "3": {
+    "pairing_id": 3,
+    "primary_currency": "BTC",
+    "secondary_currency": "NMC",
+    "change": 0,
+    "last_price": 0.000401,
+    "volume_24hours": 0,
+    "orderbook": {
+      "bids": {
+        "total": 21,
+        "volume": 7146.09121736,
+        "highbid": 0.000396
+      },
+      "asks": {
+        "total": 52,
+        "volume": 470.30449796,
+        "highbid": 0.0004689
+      }
+    }
+  },
+  "4": {
+    "pairing_id": 4,
+    "primary_currency": "BTC",
+    "secondary_currency": "DOG",
+    "change": -4.35,
+    "last_price": 4.4e-7,
+    "volume_24hours": 3828161.9954577,
+    "orderbook": {
+      "bids": {
+        "total": 46,
+        "volume": 1978469.5266396,
+        "highbid": 4.3e-7
+      },
+      "asks": {
+        "total": 248,
+        "volume": 9842030.5646547,
+        "highbid": 4.4e-7
+      }
+    }
+  },
+  "5": {
+    "pairing_id": 5,
+    "primary_currency": "BTC",
+    "secondary_currency": "PPC",
+    "change": 0,
+    "last_price": 0.00031118,
+    "volume_24hours": 0,
+    "orderbook": {
+      "bids": {
+        "total": 6,
+        "volume": 5045.69322345,
+        "highbid": 0.00031118
+      },
+      "asks": {
+        "total": 58,
+        "volume": 598.06706138,
+        "highbid": 0.000593
+      }
+    }
+  },
+  "6": {
+    "pairing_id": 6,
+    "primary_currency": "BTC",
+    "secondary_currency": "FTC",
+    "change": 0,
+    "last_price": 0.00001014,
+    "volume_24hours": 61,
+    "orderbook": {
+      "bids": {
+        "total": 16,
+        "volume": 666879.50617581,
+        "highbid": 0.00000952
+      },
+      "asks": {
+        "total": 49,
+        "volume": 73200.85667975,
+        "highbid": 0.00001396
+      }
+    }
+  },
+  "7": {
+    "pairing_id": 7,
+    "primary_currency": "BTC",
+    "secondary_currency": "XPM",
+    "change": 0,
+    "last_price": 0.00006516,
+    "volume_24hours": 26.56025736,
+    "orderbook": {
+      "bids": {
+        "total": 10,
+        "volume": 5315.07998726,
+        "highbid": 0.0000655
+      },
+      "asks": {
+        "total": 44,
+        "volume": 2074.73196029,
+        "highbid": 0.0001
+      }
+    }
+  },
+  "8": {
+    "pairing_id": 8,
+    "primary_currency": "BTC",
+    "secondary_currency": "ZEC",
+    "change": -1.89,
+    "last_price": 0.05229301,
+    "volume_24hours": 23.95762527,
+    "orderbook": {
+      "bids": {
+        "total": 21,
+        "volume": 82.53046966,
+        "highbid": 0.05229401
+      },
+      "asks": {
+        "total": 350,
+        "volume": 215.40230975,
+        "highbid": 0.05299
+      }
+    }
+  },
+  "13": {
+    "pairing_id": 13,
+    "primary_currency": "BTC",
+    "secondary_currency": "HYP",
+    "change": 0,
+    "last_price": 4.4e-7,
+    "volume_24hours": 26689.75628005,
+    "orderbook": {
+      "bids": {
+        "total": 12,
+        "volume": 1190328.8881562,
+        "highbid": 3.8e-7
+      },
+      "asks": {
+        "total": 57,
+        "volume": 2657954.4915159,
+        "highbid": 4.4e-7
+      }
+    }
+  },
+  "14": {
+    "pairing_id": 14,
+    "primary_currency": "BTC",
+    "secondary_currency": "PND",
+    "change": 0,
+    "last_price": 1e-8,
+    "volume_24hours": 3858775.8825,
+    "orderbook": {
+      "bids": {
+        "total": 0,
+        "volume": 0,
+        "highbid": 1e-8
+      },
+      "asks": {
+        "total": 179,
+        "volume": 445930225.27003,
+        "highbid": 1e-8
+      }
+    }
+  },
+  "15": {
+    "pairing_id": 15,
+    "primary_currency": "BTC",
+    "secondary_currency": "XCN",
+    "change": 0,
+    "last_price": 0.00000154,
+    "volume_24hours": 664.56818181,
+    "orderbook": {
+      "bids": {
+        "total": 15,
+        "volume": 520572.27819444,
+        "highbid": 0.00000111
+      },
+      "asks": {
+        "total": 101,
+        "volume": 636603.00291352,
+        "highbid": 0.00000154
+      }
+    }
+  },
+  "17": {
+    "pairing_id": 17,
+    "primary_currency": "BTC",
+    "secondary_currency": "XPY",
+    "change": -37.5,
+    "last_price": 0.0000031,
+    "volume_24hours": 91349.13900712,
+    "orderbook": {
+      "bids": {
+        "total": 21,
+        "volume": 316487.12567015,
+        "highbid": 0.00000315
+      },
+      "asks": {
+        "total": 18,
+        "volume": 17180.42048101,
+        "highbid": 0.00000933
+      }
+    }
+  },
+  "19": {
+    "pairing_id": 19,
+    "primary_currency": "BTC",
+    "secondary_currency": "QRK",
+    "change": 0.43,
+    "last_price": 0.000007,
+    "volume_24hours": 1528.40569448,
+    "orderbook": {
+      "bids": {
+        "total": 10,
+        "volume": 265310.0329664,
+        "highbid": 0.0000035
+      },
+      "asks": {
+        "total": 49,
+        "volume": 71161.30284262,
+        "highbid": 0.00000696
+      }
+    }
+  },
+  "20": {
+    "pairing_id": 20,
+    "primary_currency": "BTC",
+    "secondary_currency": "ETH",
+    "change": -0.93,
+    "last_price": 0.0709435,
+    "volume_24hours": 47.45510809,
+    "orderbook": {
+      "bids": {
+        "total": 26,
+        "volume": 318.31964811,
+        "highbid": 0.07094359
+      },
+      "asks": {
+        "total": 94,
+        "volume": 234.1844284,
+        "highbid": 0.072
+      }
+    }
+  },
+  "21": {
+    "pairing_id": 21,
+    "primary_currency": "THB",
+    "secondary_currency": "ETH",
+    "change": -1.4,
+    "last_price": 10600,
+    "volume_24hours": 3291.50195428,
+    "orderbook": {
+      "bids": {
+        "total": 488,
+        "volume": 2760.83146277,
+        "highbid": 10535
+      },
+      "asks": {
+        "total": 1441,
+        "volume": 4316.86409805,
+        "highbid": 10600
+      }
+    }
+  },
+  "22": {
+    "pairing_id": 22,
+    "primary_currency": "THB",
+    "secondary_currency": "DAS",
+    "change": 0.66,
+    "last_price": 11106.4,
+    "volume_24hours": 58.57991878,
+    "orderbook": {
+      "bids": {
+        "total": 116,
+        "volume": 377.01638249,
+        "highbid": 11072.6
+      },
+      "asks": {
+        "total": 189,
+        "volume": 151.64546701,
+        "highbid": 11112.6
+      }
+    }
+  },
+  "23": {
+    "pairing_id": 23,
+    "primary_currency": "THB",
+    "secondary_currency": "REP",
+    "change": 1.59,
+    "last_price": 780,
+    "volume_24hours": 169.91652148,
+    "orderbook": {
+      "bids": {
+        "total": 62,
+        "volume": 1077.52514006,
+        "highbid": 770.00000001
+      },
+      "asks": {
+        "total": 184,
+        "volume": 1347.96912402,
+        "highbid": 783
+      }
+    }
+  },
+  "24": {
+    "pairing_id": 24,
+    "primary_currency": "THB",
+    "secondary_currency": "GNO",
+    "change": 1.01,
+    "last_price": 5000.00000001,
+    "volume_24hours": 44.66674836,
+    "orderbook": {
+      "bids": {
+        "total": 56,
+        "volume": 163.17078405,
+        "highbid": 5000.00000001
+      },
+      "asks": {
+        "total": 265,
+        "volume": 273.25524228,
+        "highbid": 5120
+      }
+    }
+  },
+  "25": {
+    "pairing_id": 25,
+    "primary_currency": "THB",
+    "secondary_currency": "XRP",
+    "change": -1.88,
+    "last_price": 7.3,
+    "volume_24hours": 2140508.498477,
+    "orderbook": {
+      "bids": {
+        "total": 563,
+        "volume": 1434964.621054,
+        "highbid": 7.3
+      },
+      "asks": {
+        "total": 2458,
+        "volume": 5884815.049454,
+        "highbid": 7.31
+      }
+    }
+  },
+  "26": {
+    "pairing_id": 26,
+    "primary_currency": "THB",
+    "secondary_currency": "OMG",
+    "change": 10.38,
+    "last_price": 407.3,
+    "volume_24hours": 644430.1808156,
+    "orderbook": {
+      "bids": {
+        "total": 1779,
+        "volume": 273592.08534585,
+        "highbid": 407.3
+      },
+      "asks": {
+        "total": 2656,
+        "volume": 248916.22394051,
+        "highbid": 408
+      }
+    }
+  }
+}`
+
+	var curs interface{}
+	if err := json.Unmarshal([]byte(str), &curs); err != nil {
+		fmt.Println(err)
+		return
+	}
+	//fmt.Println(curs)
+
+	for _, c := range curs.(map[string]interface{}) {
+		fmt.Println(parseCurrency(c))
+	}
+}
+
+type currency struct {
+	PrimaryCurrency   string
+	SecondaryCurrency string
+	Change            float64
+	LastPrice         float64
+	Volume24Hours     float64
+}
+
+func parseCurrency(d interface{}) currency {
+	data := d.(map[string]interface{})
+	return currency{
+		PrimaryCurrency:   data["primary_currency"].(string),
+		SecondaryCurrency: data["secondary_currency"].(string),
+		Change:            data["change"].(float64),
+		LastPrice:         data["last_price"].(float64),
+		Volume24Hours:     data["volume_24hours"].(float64),
+	}
+}

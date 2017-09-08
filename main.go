@@ -1,22 +1,23 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
-var bot *linebot.Client
+var (
+	bot   *linebot.Client
+	bxAPI = "https://bx.in.th/api/"
+)
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		panic("$PORT must be set")
-	}
-
 	var err error
 	bot, err = linebot.New(os.Getenv("CHANNEL_SECRET"), os.Getenv("CHANNEL_TOKEN"))
 	if err != nil {
@@ -27,7 +28,7 @@ func main() {
 	r.Use(gin.Logger())
 	r.POST("/bot", botHandler)
 
-	r.Run(":" + port)
+	r.Run(":" + os.Getenv("PORT"))
 }
 
 func botHandler(c *gin.Context) {
@@ -44,11 +45,68 @@ func botHandler(c *gin.Context) {
 	}
 
 	for _, event := range events {
-		switch event.Type {
-		case linebot.EventTypeMessage:
-			if _, err := bot.ReplyMessage(event.ReplyToken, linebot.NewTextMessage("test from heroku")).Do(); err != nil {
-				log.Println("reply message error:", err)
+		if event.Type == linebot.EventTypeMessage {
+			switch msg := event.Message.(type) {
+			case *linebot.TextMessage:
+				if _, err := bot.ReplyMessage(event.ReplyToken, lineTextResponse(msg.Text)).Do(); err != nil {
+					log.Println("reply message error:", err)
+				}
 			}
 		}
+	}
+}
+
+func lineTextResponse(msg string) *linebot.TextMessage {
+	rtn := "ยังตอบไม่ได้อ่ะ"
+	if strings.Contains(msg, "current") {
+		cur, err := getBXCurrency("omg")
+		if err != nil {
+			rtn = "error เบย: " + err.Error()
+		}
+		rtn = fmt.Sprint("ค่าเงิน omg: ", cur.LastPrice)
+	}
+	return linebot.NewTextMessage(rtn)
+}
+
+func getBXCurrency(name string) (currency, error) {
+	resp, err := http.Get(bxAPI)
+	if err != nil {
+		return currency{}, err
+	}
+
+	var p interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
+		return currency{}, err
+	}
+	defer resp.Body.Close()
+
+	var curs []currency
+	for _, c := range p.(map[string]interface{}) {
+		curs = append(curs, parseCurrency(c.(map[string]interface{})))
+	}
+
+	for _, c := range curs {
+		if strings.ToLower(c.SecondaryCurrency) == strings.ToLower(name) {
+			return c, nil
+		}
+	}
+	return currency{}, nil
+}
+
+type currency struct {
+	PrimaryCurrency   string
+	SecondaryCurrency string
+	Change            float64
+	LastPrice         float64
+	Volume24Hours     float64
+}
+
+func parseCurrency(data map[string]interface{}) currency {
+	return currency{
+		PrimaryCurrency:   data["primary_currency"].(string),
+		SecondaryCurrency: data["secondary_currency"].(string),
+		Change:            data["change"].(float64),
+		LastPrice:         data["last_price"].(float64),
+		Volume24Hours:     data["volume_24hours"].(float64),
 	}
 }
