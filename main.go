@@ -49,6 +49,8 @@ func botHandler(c *gin.Context) {
 		if event.Type == linebot.EventTypeMessage {
 			switch msg := event.Message.(type) {
 			case *linebot.TextMessage:
+				fmt.Println("reply token:", event.ReplyToken, msg.Text)
+
 				if _, err := bot.ReplyMessage(event.ReplyToken, lineTextResponse(msg.Text)).Do(); err != nil {
 					log.Println("reply message error:", err)
 				}
