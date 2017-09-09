@@ -286,8 +286,8 @@ func (pi poolingInterval) Key(curr string) string {
 
 func (pi poolingInterval) HandlePush(p push, curr currency) error {
 	minutes := time.Duration(p.Interval) * time.Minute
-	minutesAgo := time.Now().Add(-minutes).Add(10 * time.Second)
-	if p.PushedAt.Before(minutesAgo) {
+	minutesAgo := time.Now().Add(-minutes).Add(-10 * time.Second)
+	if p.PushedAt.After(minutesAgo) {
 		return errors.New("no need to push")
 	}
 
