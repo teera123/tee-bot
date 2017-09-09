@@ -41,6 +41,9 @@ func (h helpResponse) Do(args ...string) (string, error) {
 	rtn += "\n2. setinterval ${currency} ${minutes}"
 	rtn += "\n3. viewinterval"
 	rtn += "\n4. removeinterval ${currency}"
+	rtn += "\n5. setalert ${currency} ${range}"
+	rtn += "\n6. viewalert"
+	rtn += "\n7. removealert ${currency}"
 
 	return rtn, nil
 }
@@ -144,20 +147,20 @@ func (v viewIntervalResponse) Do(args ...string) (string, error) {
 		}
 	}
 
-	rtn := "ท่านตั้งค่า interval ดังนี้...\n"
+	rtn := "ท่านตั้งค่า interval ดังนี้..."
 	for _, k := range keys {
 		data, err := redis.Bytes(conn.Do("GET", k))
 		if err != nil {
-			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+			rtn += fmt.Sprintf("\nค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
 		}
 
 		var p push
 		if err := json.Unmarshal(data, &p); err != nil {
-			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+			rtn += fmt.Sprintf("\nค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
 		}
-		rtn += fmt.Sprintf("\nค่าเงิน %s ยิงทุกๆ %d นาที", p.Currency, p.Interval)
+		rtn += fmt.Sprintf("\nค่าเงิน %s ยิงทุกๆ %d นาที ล่าสุด: %s", p.Currency, p.Interval, p.PushedAt)
 	}
 	return rtn, nil
 }
@@ -269,20 +272,24 @@ func (v viewAlertResponse) Do(args ...string) (string, error) {
 		}
 	}
 
-	rtn := "ท่านตั้งค่า alert ดังนี้...\n"
+	rtn := "ท่านตั้งค่า alert ดังนี้..."
 	for _, k := range keys {
 		data, err := redis.Bytes(conn.Do("GET", k))
 		if err != nil {
-			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+			rtn += fmt.Sprintf("\nค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
 		}
 
 		var p push
 		if err := json.Unmarshal(data, &p); err != nil {
-			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+			rtn += fmt.Sprintf("\nค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
 		}
-		rtn += fmt.Sprintf("\nค่าเงิน %s: %s บาท", p.Currency, p.CheckAlert)
+
+		price := accounting.FormatNumberFloat64(p.CheckAlert, 2, ",", ".")
+		min, max := p.CheckAlert-p.CheckRange, p.CheckAlert+p.CheckRange
+
+		rtn += fmt.Sprintf("\nค่าเงิน %s: %s (%.2f - %.2f) บาท", p.Currency, price, min, max)
 	}
 	return rtn, nil
 }

@@ -287,7 +287,7 @@ func (pi poolingInterval) Key(curr string) string {
 func (pi poolingInterval) HandlePush(p push, curr currency) error {
 	minutes := time.Duration(p.Interval) * time.Minute
 	minutesAgo := time.Now().Add(-minutes).Add(10 * time.Second)
-	if p.PushedAt.After(minutesAgo) {
+	if p.PushedAt.Before(minutesAgo) {
 		return errors.New("no need to push")
 	}
 
@@ -311,7 +311,7 @@ func (pa poolingAlert) HandlePush(p push, curr currency) error {
 	}
 
 	price := accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", ".")
-	msg := fmt.Sprintf("ค่าเงิน %s อยู่ในช่วง %s(%.2f - %.2f) เลยนะ ดูดีๆ", curr.SecondaryCurrency, price, min, max)
+	msg := fmt.Sprintf("ค่าเงิน %s อยู่ในช่วง %s (%.2f - %.2f) เลยนะ ดูดีๆ", curr.SecondaryCurrency, price, min, max)
 	if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
 		return err
 	}
