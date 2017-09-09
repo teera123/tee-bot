@@ -18,11 +18,13 @@ type textResponse interface {
 	Do(args ...string) (string, error)
 }
 
-type pushInterval struct {
-	UserID   string     `json:"user_id"`
-	Currency string     `json:"currency"`
-	Interval int        `json:"interval"`
-	PushedAt *time.Time `json:"pushed_at"`
+type push struct {
+	UserID     string     `json:"user_id"`
+	Currency   string     `json:"currency"`
+	Interval   int        `json:"interval"`
+	CheckAlert float64    `json:"check_alert"`
+	CheckRange float64    `json:"check_range"`
+	PushedAt   *time.Time `json:"pushed_at"`
 }
 
 type generalResponse struct{}
@@ -73,7 +75,7 @@ func (s setIntervalResponse) Do(args ...string) (string, error) {
 	skey := fmt.Sprintf("interval:%s", curr)
 
 	tn := time.Now()
-	p := pushInterval{
+	p := push{
 		UserID:   s.Source.UserID,
 		Currency: curr,
 		Interval: ti,
@@ -150,7 +152,7 @@ func (v viewIntervalResponse) Do(args ...string) (string, error) {
 			continue
 		}
 
-		var p pushInterval
+		var p push
 		if err := json.Unmarshal(data, &p); err != nil {
 			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
@@ -176,4 +178,111 @@ func (f flushAllResponse) Do(args ...string) (string, error) {
 		return "", errors.New("ลบไม่ได้จ้าาาา = =")
 	}
 	return "ลบข้อมูลแล้วนะ ลาก่อยยยยย", nil
+}
+
+type setAlertResponse struct {
+	Source *linebot.EventSource
+}
+
+func (s setAlertResponse) Do(args ...string) (string, error) {
+	curr := strings.ToLower(args[1])
+	am, err := strconv.ParseFloat(args[2], 64)
+	if err != nil {
+		return "", errors.New("ส่งเงินเป็นตัวเลขเน้อออออ")
+	}
+	ra, err := strconv.ParseFloat(args[3], 64)
+	if err != nil {
+		return "", errors.New("ส่ง range เป็น float นะ")
+	}
+
+	hkey := fmt.Sprintf("%s:%s:alert", s.Source.UserID, curr)
+	skey := fmt.Sprintf("alert:%s", curr)
+
+	tn := time.Now()
+	p := push{
+		UserID:     s.Source.UserID,
+		Currency:   curr,
+		CheckAlert: am,
+		CheckRange: ra,
+		PushedAt:   &tn,
+	}
+	data, err := json.Marshal(p)
+	if err != nil {
+		return "", errors.New("สร้าง json บ่ได้")
+	}
+
+	conn := rdPool.Get()
+	defer conn.Close()
+
+	conn.Send("MULTI")
+	conn.Send("SET", hkey, data)
+	conn.Send("SADD", skey, hkey)
+	if _, err := conn.Do("EXEC"); err != nil {
+		return "", errors.New("redis พังอ่ะ " + err.Error())
+	}
+	return "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED", nil
+}
+
+type removeAlertResponse struct {
+	Source *linebot.EventSource
+}
+
+func (r removeAlertResponse) Do(args ...string) (string, error) {
+	curr := strings.ToLower(args[1])
+	conn := rdPool.Get()
+	defer conn.Close()
+
+	hkey := fmt.Sprintf("%s:%s:alert", r.Source.UserID, curr)
+	skey := fmt.Sprintf("alert:%s", curr)
+
+	conn.Send("MULTI")
+	conn.Send("DEL", hkey)
+	conn.Send("SREM", skey, hkey)
+	if _, err := conn.Do("EXEC"); err != nil {
+		return "", errors.New("redis พังอ่ะ " + err.Error())
+	}
+	return "ลบค่าเรียบร้อยยยยย", nil
+}
+
+type viewAlertResponse struct {
+	Source *linebot.EventSource
+}
+
+func (v viewAlertResponse) Do(args ...string) (string, error) {
+	conn := rdPool.Get()
+	defer conn.Close()
+
+	iter := 0
+	key := fmt.Sprintf("%s:*:alert", v.Source.UserID)
+	var keys []string
+	for {
+		if arr, err := redis.Values(conn.Do("SCAN", iter, "MATCH", key)); err == nil {
+			iter, _ = redis.Int(arr[0], nil)
+			vs, _ := redis.Strings(arr[1], nil)
+
+			if len(vs) > 0 {
+				keys = append(keys, vs...)
+			}
+		}
+		if iter == 0 {
+			break
+		}
+	}
+
+	rtn := "ท่านตั้งค่า alert ดังนี้...\n"
+	for _, k := range keys {
+		data, err := redis.Bytes(conn.Do("GET", k))
+		if err != nil {
+			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+			continue
+		}
+
+		var p push
+		if err := json.Unmarshal(data, &p); err != nil {
+			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
+			continue
+		}
+		rtn += fmt.Sprintf("\nค่าเงิน %s: %s บาท", p.Currency, p.CheckAlert)
+	}
+	return rtn, nil
 }

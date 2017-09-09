@@ -87,6 +87,12 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		resp = viewIntervalResponse{source}
 	case command == "removeinterval":
 		resp = removeIntervalResponse{source}
+	case command == "setalert":
+		resp = setAlertResponse{source}
+	case command == "viewalert":
+		resp = viewAlertResponse{source}
+	case command == "removealert":
+		resp = removeAlertResponse{source}
 	case command == "flushall":
 		resp = flushAllResponse{source}
 	default:
@@ -220,48 +226,94 @@ func (p pooling) sending() error {
 	conn := rdPool.Get()
 	defer conn.Close()
 
-	for _, c := range curs {
-		key := fmt.Sprintf("interval:%s", c.SecondaryCurrency)
-		members, err := redis.Strings(conn.Do("SMEMBERS", key))
+	pool := func(curr currency, i interval) error {
+		members, err := redis.Strings(conn.Do("SMEMBERS", i.Key(curr.SecondaryCurrency)))
 		if err != nil {
-			continue
+			log.Println("smembers error:", i.Key(curr.SecondaryCurrency), err)
+			return err
 		}
 
 		for _, m := range members {
 			data, err := redis.Bytes(conn.Do("GET", m))
 			if err != nil {
+				log.Println("get key error:", m, err)
 				continue
 			}
 
-			var p pushInterval
-			if err := json.Unmarshal(data, &p); err != nil {
+			var ph push
+			if err := json.Unmarshal(data, &ph); err != nil {
 				continue
 			}
 
-			minutes := time.Duration(p.Interval) * time.Minute
-			minutesAgo := time.Now().Add(-minutes).Add(10 * time.Second)
-			if p.PushedAt.Before(minutesAgo) {
-				msg := fmt.Sprintf("ค่าเงิน %s: %s", p.Currency, accounting.FormatNumberFloat64(c.LastPrice, 2, ",", "."))
-				if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
-					log.Println("push message error:", p.UserID, err)
-					continue
-				}
+			if err := i.HandlePush(ph, curr); err != nil {
+				continue
+			}
 
-				tn := time.Now()
-				p.PushedAt = &tn
+			tn := time.Now()
+			ph.PushedAt = &tn
 
-				data, err := json.Marshal(p)
-				if err != nil {
-					log.Println("unable to marshal json:", err)
-					continue
-				}
+			data, err = json.Marshal(p)
+			if err != nil {
+				continue
+			}
 
-				if _, err := conn.Do("SET", m, data); err != nil {
-					log.Println("unable to set new data:", m, err)
-				}
+			if _, err := conn.Do("SET", m, data); err != nil {
+				log.Println("unable to set new data:", m, err)
 			}
 		}
+
+		return nil
 	}
 
+	for _, c := range curs {
+		pool(c, poolingInterval{})
+		pool(c, poolingAlert{})
+	}
+
+	return nil
+}
+
+type interval interface {
+	Key(string) string
+	HandlePush(push, currency) error
+}
+
+type poolingInterval struct{}
+
+func (pi poolingInterval) Key(curr string) string {
+	return fmt.Sprintf("interval:%s", curr)
+}
+
+func (pi poolingInterval) HandlePush(p push, curr currency) error {
+	minutes := time.Duration(p.Interval) * time.Minute
+	minutesAgo := time.Now().Add(-minutes).Add(10 * time.Second)
+	if p.PushedAt.After(minutesAgo) {
+		return errors.New("no need to push")
+	}
+
+	msg := fmt.Sprintf("ค่าเงิน %s: %s", curr.SecondaryCurrency, accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", "."))
+	if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
+		return err
+	}
+	return nil
+}
+
+type poolingAlert struct{}
+
+func (pa poolingAlert) Key(curr string) string {
+	return fmt.Sprintf("alert:%s", curr)
+}
+
+func (pa poolingAlert) HandlePush(p push, curr currency) error {
+	min, max := p.CheckAlert-p.CheckRange, p.CheckAlert+p.CheckRange
+	if curr.LastPrice <= min || curr.LastPrice >= max {
+		return errors.New("no need to push")
+	}
+
+	price := accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", ".")
+	msg := fmt.Sprintf("ค่าเงิน %s อยู่ในช่วง %s(%.2f - %.2f) เลยนะ ดูดีๆ", curr.SecondaryCurrency, price, min, max)
+	if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
+		return err
+	}
 	return nil
 }
