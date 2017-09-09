@@ -2,18 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/leekchan/accounting"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
@@ -71,90 +68,21 @@ func botHandler(c *gin.Context) {
 func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMessage {
 	args := strings.Split(msg, " ")
 	command := strings.ToLower(args[0])
-	rtn := "ตอบไม่ได้อ่ะ เสียใจ T^T"
 
+	var resp textResponse
 	switch {
-	case strings.HasPrefix(command, "help"):
-		rtn = "ทำแบบนี้ๆ\n"
-		rtn += "1. curr ${currency}"
-		rtn += "2. setinterval ${currency} ${minutes}"
+	case command == "help":
+		resp = helpResponse{}
 	case strings.HasPrefix(command, "curr"):
-		curr, err := getBXCurrency(args[1])
-		if err != nil {
-			rtn = "error เบย: " + err.Error()
-		}
-		rtn = fmt.Sprint("ค่าเงิน ", args[1], ": ", accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", "."))
+		resp = currentResponse{}
 	case strings.HasPrefix(command, "setinterval"):
-		t, err := strconv.Atoi(args[2])
-		if err != nil {
-			rtn = "ส่งเวลาเป็นตัวเลขด้วยจ้าาาา"
-			goto ex
-		}
-
-		curr := strings.ToLower(args[1])
-		hkey := fmt.Sprintf("%s:%s", source.UserID, curr)
-		skey := fmt.Sprintf("push:%s", curr)
-
-		tn := time.Now()
-		p := push{
-			UserID:   source.UserID,
-			Currency: curr,
-			Interval: t,
-			PushedAt: &tn,
-		}
-		data, err := json.Marshal(p)
-		if err != nil {
-			rtn = "สร้าง json บ่ได้ " + err.Error()
-			goto ex
-		}
-
-		conn := rdPool.Get()
-		defer conn.Close()
-
-		conn.Send("MULTI")
-		conn.Send("SET", hkey, data)
-		conn.Send("SADD", skey, hkey)
-		if _, err := conn.Do("EXEC"); err != nil {
-			rtn = "redis พังอ่ะ " + err.Error()
-			goto ex
-		}
-		rtn = "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED"
-	case strings.HasPrefix(command, "viewinterval"):
-		conn := rdPool.Get()
-		defer conn.Close()
-
-		iter := 0
-		key := fmt.Sprintf("%s:*", source.UserID)
-		var keys []string
-		for {
-			if arr, err := redis.Values(conn.Do("SCAN", iter, "MATCH", key)); err == nil {
-				iter, _ = redis.Int(arr[0], nil)
-				vals, _ := redis.Strings(arr[1], nil)
-
-				keys = append(keys, vals...)
-			}
-			if iter == 0 {
-				break
-			}
-		}
-
-		rtn = "ท่านตั้งค่า interval ดังนี้...\n"
-		for _, k := range keys {
-			data, err := redis.Bytes(conn.Do("GET", k))
-			if err != nil {
-				rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
-				continue
-			}
-
-			var p push
-			if err := json.Unmarshal(data, &p); err != nil {
-				rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
-				continue
-			}
-			rtn += fmt.Sprintf("ค่าเงิน: %s\n", p.Currency)
-			rtn += fmt.Sprintf("ยิงเมื่อ: %d นาที\n", p.Interval)
-			rtn += "============\n"
-		}
+		resp = setIntervalResponse{source}
+	case command == "viewinterval":
+		resp = viewIntervalResponse{source}
+	case command == "flushall":
+		resp = flushAllResponse{source}
+	default:
+		resp = generalResponse{}
 
 		//key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
 		//fmt.Println("key:", key)
@@ -176,22 +104,12 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		//	}
 		//	fmt.Println(vs)
 		//}
-	case command == "flushall":
-		if source.UserID != os.Getenv("ADMIN_TOKEN") {
-			rtn = "ไม่ให้ทำหรอก ชิชิ"
-			goto ex
-		}
-
-		conn := rdPool.Get()
-		defer conn.Close()
-
-		if _, err := conn.Do("FLUSHALL"); err != nil {
-			rtn = "ลบไม่ได้จ้าาาา = = " + err.Error()
-		}
-		rtn = "ลบข้อมูลแล้วนะ ลาก่อยยยยย"
 	}
 
-ex:
+	rtn, err := resp.Do(args...)
+	if err != nil {
+		return linebot.NewTextMessage(err.Error())
+	}
 	return linebot.NewTextMessage(rtn)
 }
 
@@ -288,11 +206,4 @@ func createRedisPool() (*redis.Pool, error) {
 		},
 	}
 	return pool, nil
-}
-
-type push struct {
-	UserID   string     `json:"user_id"`
-	Currency string     `json:"currency"`
-	Interval int        `json:"interval"`
-	PushedAt *time.Time `json:"pushed_at"`
 }
