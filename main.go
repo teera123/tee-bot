@@ -252,7 +252,7 @@ func (p pooling) sending() error {
 			tn := time.Now()
 			ph.PushedAt = &tn
 
-			data, err = json.Marshal(p)
+			data, err = json.Marshal(ph)
 			if err != nil {
 				continue
 			}
