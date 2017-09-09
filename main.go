@@ -81,35 +81,16 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		resp = helpResponse{}
 	case strings.HasPrefix(command, "curr"):
 		resp = currentResponse{}
-	case strings.HasPrefix(command, "setinterval"):
+	case command == "setinterval":
 		resp = setIntervalResponse{source}
 	case command == "viewinterval":
 		resp = viewIntervalResponse{source}
+	case command == "removeinterval":
+		resp = removeIntervalResponse{source}
 	case command == "flushall":
 		resp = flushAllResponse{source}
 	default:
 		resp = generalResponse{}
-
-		//key := fmt.Sprintf("%s:push", strings.ToLower(args[1]))
-		//fmt.Println("key:", key)
-		//
-		//members, err := redis.Strings(conn.Do("SMEMBERS", key))
-		//if err != nil {
-		//	rtn = "redis พังอ่ะ " + err.Error()
-		//	goto ex
-		//}
-		//fmt.Println("members:", members)
-		//
-		//for _, m := range members {
-		//	rtn = m + "\n"
-		//
-		//	vs, err := redis.Values(conn.Do("HMGET", m, "interval", "last_push"))
-		//	if err != nil {
-		//		rtn += "error จ้าาาา " + err.Error()
-		//		continue
-		//	}
-		//	fmt.Println(vs)
-		//}
 	}
 
 	rtn, err := resp.Do(args...)
@@ -240,7 +221,7 @@ func (p pooling) sending() error {
 	defer conn.Close()
 
 	for _, c := range curs {
-		key := fmt.Sprintf("push:%s", c.SecondaryCurrency)
+		key := fmt.Sprintf("interval:%s", c.SecondaryCurrency)
 		members, err := redis.Strings(conn.Do("SMEMBERS", key))
 		if err != nil {
 			continue

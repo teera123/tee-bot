@@ -34,10 +34,11 @@ func (g generalResponse) Do(args ...string) (string, error) {
 type helpResponse struct{}
 
 func (h helpResponse) Do(args ...string) (string, error) {
-	rtn := "ทำแบบนี้ๆ\n"
-	rtn += "1. curr ${currency}\n"
-	rtn += "2. setinterval ${currency} ${minutes}\n"
-	rtn += "3. viewinterval"
+	rtn := "ทำแบบนี้ๆ"
+	rtn += "\n1. curr ${currency}"
+	rtn += "\n2. setinterval ${currency} ${minutes}"
+	rtn += "\n3. viewinterval"
+	rtn += "\n4. removeinterval ${currency}"
 
 	return rtn, nil
 }
@@ -69,7 +70,7 @@ func (s setIntervalResponse) Do(args ...string) (string, error) {
 	}
 
 	hkey := fmt.Sprintf("%s:%s:interval", s.Source.UserID, curr)
-	skey := fmt.Sprintf("push:%s", curr)
+	skey := fmt.Sprintf("interval:%s", curr)
 
 	tn := time.Now()
 	p := pushInterval{
@@ -93,6 +94,27 @@ func (s setIntervalResponse) Do(args ...string) (string, error) {
 		return "", errors.New("redis พังอ่ะ " + err.Error())
 	}
 	return "ตั้งค่าเรียบร้อยคร๊าบบบบบ DED", nil
+}
+
+type removeIntervalResponse struct {
+	Source *linebot.EventSource
+}
+
+func (r removeIntervalResponse) Do(args ...string) (string, error) {
+	curr := strings.ToLower(args[1])
+	conn := rdPool.Get()
+	defer conn.Close()
+
+	hkey := fmt.Sprintf("%s:%s:interval", r.Source.UserID, curr)
+	skey := fmt.Sprintf("interval:%s", curr)
+
+	conn.Send("MULTI")
+	conn.Send("DEL", hkey)
+	conn.Send("SREM", skey, hkey)
+	if _, err := conn.Do("EXEC"); err != nil {
+		return "", errors.New("redis พังอ่ะ " + err.Error())
+	}
+	return "ลบค่าเรียบร้อยยยยย", nil
 }
 
 type viewIntervalResponse struct {
