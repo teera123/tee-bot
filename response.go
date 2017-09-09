@@ -45,10 +45,12 @@ func (h helpResponse) Do(args ...string) (string, error) {
 type currentResponse struct{}
 
 func (c currentResponse) Do(args ...string) (string, error) {
-	curr, err := getBXCurrency(args[1])
+	curs, err := getBXCurrency()
 	if err != nil {
 		return "", errors.New("error เบย " + err.Error())
 	}
+	curr := curs.GetByName(args[1])
+
 	return fmt.Sprintf("ค่าเงิน %s: %s", args[1], accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", ".")), nil
 }
 

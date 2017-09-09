@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/leekchan/accounting"
 	"github.com/line/line-bot-sdk-go/linebot"
 )
 
@@ -31,6 +34,9 @@ func main() {
 	if err != nil {
 		panic("cannot connect redis")
 	}
+
+	p := pooling{}
+	go p.Run()
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -113,29 +119,23 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 	return linebot.NewTextMessage(rtn)
 }
 
-func getBXCurrency(name string) (currency, error) {
+func getBXCurrency() (currencies, error) {
 	resp, err := http.Get(bxAPI)
 	if err != nil {
-		return currency{}, err
+		return nil, err
 	}
 
 	var p interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
-		return currency{}, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	var curs []currency
+	var curs currencies
 	for _, c := range p.(map[string]interface{}) {
 		curs = append(curs, parseCurrency(c.(map[string]interface{})))
 	}
-
-	for _, c := range curs {
-		if strings.ToLower(c.SecondaryCurrency) == strings.ToLower(name) {
-			return c, nil
-		}
-	}
-	return currency{}, nil
+	return curs, nil
 }
 
 type currency struct {
@@ -148,12 +148,23 @@ type currency struct {
 
 func parseCurrency(data map[string]interface{}) currency {
 	return currency{
-		PrimaryCurrency:   data["primary_currency"].(string),
-		SecondaryCurrency: data["secondary_currency"].(string),
+		PrimaryCurrency:   strings.ToLower(data["primary_currency"].(string)),
+		SecondaryCurrency: strings.ToLower(data["secondary_currency"].(string)),
 		Change:            data["change"].(float64),
 		LastPrice:         data["last_price"].(float64),
 		Volume24Hours:     data["volume_24hours"].(float64),
 	}
+}
+
+type currencies []currency
+
+func (curs currencies) GetByName(name string) currency {
+	for _, c := range curs {
+		if c.SecondaryCurrency == strings.ToLower(name) {
+			return c
+		}
+	}
+	return currency{}
 }
 
 // parseURL in the form of redis://h:<pwd>@ec2-23-23-129-214.compute-1.amazonaws.com:25219
@@ -206,4 +217,56 @@ func createRedisPool() (*redis.Pool, error) {
 		},
 	}
 	return pool, nil
+}
+
+type pooling struct{}
+
+func (p pooling) Run() {
+	for range time.Tick(5 * time.Minute) {
+		if err := p.sending(); err != nil {
+			log.Println("pooling error:", err)
+			continue
+		}
+	}
+}
+
+func (p pooling) sending() error {
+	curs, err := getBXCurrency()
+	if err != nil {
+		return errors.New("unable to get bx currency: " + err.Error())
+	}
+
+	conn := rdPool.Get()
+	defer conn.Close()
+
+	for _, c := range curs {
+		key := fmt.Sprintf("push:%s", c.SecondaryCurrency)
+		members, err := redis.Strings(conn.Do("SMEMBERS", key))
+		if err != nil {
+			continue
+		}
+
+		for _, m := range members {
+			data, err := redis.Bytes(conn.Do("GET", m))
+			if err != nil {
+				continue
+			}
+
+			var p pushInterval
+			if err := json.Unmarshal(data, &p); err != nil {
+				continue
+			}
+
+			minutes := time.Duration(p.Interval) * time.Minute
+			minutesAgo := time.Now().Add(-minutes)
+			if p.PushedAt.Before(minutesAgo) {
+				msg := fmt.Sprintf("ค่าเงิน %s: %s", p.Currency, accounting.FormatNumberFloat64(c.LastPrice, 2, ",", "."))
+				if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
+					log.Println("push message error:", p.UserID, err)
+				}
+			}
+		}
+	}
+
+	return nil
 }
