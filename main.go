@@ -263,6 +263,20 @@ func (p pooling) sending() error {
 				msg := fmt.Sprintf("ค่าเงิน %s: %s", p.Currency, accounting.FormatNumberFloat64(c.LastPrice, 2, ",", "."))
 				if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
 					log.Println("push message error:", p.UserID, err)
+					continue
+				}
+
+				tn := time.Now()
+				p.PushedAt = &tn
+
+				data, err := json.Marshal(p)
+				if err != nil {
+					log.Println("unable to marshal json:", err)
+					continue
+				}
+
+				if _, err := conn.Do("SET", m, data); err != nil {
+					log.Println("unable to set new data:", m, err)
 				}
 			}
 		}
