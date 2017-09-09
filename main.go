@@ -293,11 +293,11 @@ func (pi poolingInterval) Key(curr string) string {
 }
 
 func (pi poolingInterval) HandlePush(p push, curr currency) error {
-	minutes := time.Duration(p.Interval) * time.Minute
-	minutesAgo := time.Now().Add(-minutes).Add(-10 * time.Second)
-	if p.PushedAt.After(minutesAgo) {
-		return errors.New("no need to push")
-	}
+	//minutes := time.Duration(p.Interval) * time.Minute
+	//minutesAgo := time.Now().Add(-minutes).Add(-10 * time.Second)
+	//if p.PushedAt.After(minutesAgo) {
+	//	return errors.New("no need to push")
+	//}
 
 	msg := fmt.Sprintf("ค่าเงิน %s: %s", curr.SecondaryCurrency, accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", "."))
 	if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
