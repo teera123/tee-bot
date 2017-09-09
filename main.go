@@ -21,9 +21,20 @@ var (
 	bot    *linebot.Client
 	rdPool *redis.Pool
 	bxAPI  = "https://bx.in.th/api/"
+	tz     *time.Location
 )
 
 func main() {
+	tz, _ = time.LoadLocation("Asia/Bangkok")
+
+	if len(os.Args) >= 2 && os.Args[1] == "pooling" {
+		p := pooling{}
+		if err := p.Sending(); err != nil {
+			fmt.Printf("pooling on %s error: %s", time.Now().In(tz), err)
+		}
+		return
+	}
+
 	var err error
 	bot, err = linebot.New(os.Getenv("CHANNEL_SECRET"), os.Getenv("CHANNEL_TOKEN"))
 	if err != nil {
@@ -34,9 +45,6 @@ func main() {
 	if err != nil {
 		panic("cannot connect redis")
 	}
-
-	p := pooling{}
-	go p.Run()
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -210,14 +218,14 @@ type pooling struct{}
 
 func (p pooling) Run() {
 	for range time.Tick(5 * time.Minute) {
-		if err := p.sending(); err != nil {
+		if err := p.Sending(); err != nil {
 			log.Println("pooling error:", err)
 			continue
 		}
 	}
 }
 
-func (p pooling) sending() error {
+func (p pooling) Sending() error {
 	curs, err := getBXCurrency()
 	if err != nil {
 		return errors.New("unable to get bx currency: " + err.Error())

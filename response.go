@@ -160,8 +160,6 @@ func (v viewIntervalResponse) Do(args ...string) (string, error) {
 			rtn += fmt.Sprintf("\nค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
 		}
-
-		tz, _ := time.LoadLocation("Asia/Bangkok")
 		rtn += fmt.Sprintf("\nค่าเงิน %s ยิงทุกๆ %d นาที ล่าสุด: %s", p.Currency, p.Interval, p.PushedAt.In(tz))
 	}
 	return rtn, nil
