@@ -258,7 +258,7 @@ func (p pooling) sending() error {
 			}
 
 			minutes := time.Duration(p.Interval) * time.Minute
-			minutesAgo := time.Now().Add(-minutes)
+			minutesAgo := time.Now().Add(-minutes).Add(10 * time.Second)
 			if p.PushedAt.Before(minutesAgo) {
 				msg := fmt.Sprintf("ค่าเงิน %s: %s", p.Currency, accounting.FormatNumberFloat64(c.LastPrice, 2, ",", "."))
 				if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {

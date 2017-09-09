@@ -133,7 +133,7 @@ func (v viewIntervalResponse) Do(args ...string) (string, error) {
 			rtn += fmt.Sprintf("ค่า: %s ดึงไม่ได้อ่ะ = =", k)
 			continue
 		}
-		rtn += fmt.Sprintf("ค่าเงิน %s ยิงทุกๆ %d นาที\n", p.Currency, p.Interval)
+		rtn += fmt.Sprintf("\nค่าเงิน %s ยิงทุกๆ %d นาที", p.Currency, p.Interval)
 	}
 	return rtn, nil
 }
