@@ -70,8 +70,8 @@ func (s setIntervalResponse) Do(args ...string) (string, error) {
 	if err != nil {
 		return "", errors.New("ส่งเวลาเป็นตัวเลขด้วยจ้าาาา")
 	}
-	if ti < 5 {
-		return "", errors.New("ตอนนี้ได้ต่ำสุดแค่ 5 นาทีก่อนนะ")
+	if ti != 10 {
+		return "", errors.New("ตอนนี้ได้แค่ทุกๆ 10 นาทีก่อนนะ อิอิ")
 	}
 
 	hkey := fmt.Sprintf("%s:%s:interval", s.Source.UserID, curr)

@@ -20,20 +20,12 @@ import (
 var (
 	bot    *linebot.Client
 	rdPool *redis.Pool
-	bxAPI  = "https://bx.in.th/api/"
 	tz     *time.Location
+	bxAPI  = "https://bx.in.th/api/"
 )
 
 func main() {
 	tz, _ = time.LoadLocation("Asia/Bangkok")
-
-	if len(os.Args) >= 2 && os.Args[1] == "pooling" {
-		p := pooling{}
-		if err := p.Sending(); err != nil {
-			fmt.Printf("pooling on %s error: %s", time.Now().In(tz), err)
-		}
-		return
-	}
 
 	var err error
 	bot, err = linebot.New(os.Getenv("CHANNEL_SECRET"), os.Getenv("CHANNEL_TOKEN"))
@@ -44,6 +36,14 @@ func main() {
 	rdPool, err = createRedisPool()
 	if err != nil {
 		panic("cannot connect redis")
+	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "pooling" {
+		p := pooling{}
+		if err := p.Sending(); err != nil {
+			fmt.Printf("pooling on %s error: %s", time.Now().In(tz), err)
+		}
+		return
 	}
 
 	r := gin.New()
