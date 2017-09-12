@@ -319,7 +319,12 @@ func (pa poolingAlert) HandlePush(p push, curr currency) error {
 	}
 
 	price := accounting.FormatNumberFloat64(curr.LastPrice, 2, ",", ".")
+
 	msg := fmt.Sprintf("ค่าเงิน %s อยู่ในช่วง %s (%.2f - %.2f) เลยนะ ดูดีๆ", curr.SecondaryCurrency, price, min, max)
+	if curr.LastPrice > max {
+		msg = fmt.Sprintf("%s %s ทะลุจากที่ตั้งใจแล้ววววว :P", curr.SecondaryCurrency, price)
+	}
+
 	if _, err := bot.PushMessage(p.UserID, linebot.NewTextMessage(msg)).Do(); err != nil {
 		return err
 	}
