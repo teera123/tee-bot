@@ -103,6 +103,8 @@ func lineTextResponse(msg string, source *linebot.EventSource) *linebot.TextMess
 		resp = removeAlertResponse{source}
 	case command == "flushall":
 		resp = flushAllResponse{source}
+	case command == "redis":
+		resp = runRedisResponse{source}
 	default:
 		resp = generalResponse{}
 	}

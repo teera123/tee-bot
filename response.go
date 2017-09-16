@@ -293,3 +293,23 @@ func (v viewAlertResponse) Do(args ...string) (string, error) {
 	}
 	return rtn, nil
 }
+
+type runRedisResponse struct {
+	Source *linebot.EventSource
+}
+
+func (r runRedisResponse) Do(args ...string) (string, error) {
+	if r.Source.UserID != os.Getenv("ADMIN_TOKEN") {
+		return "", errors.New("ไม่ให้ทำหรอก ชิชิ")
+	}
+
+	conn := rdPool.Get()
+	defer conn.Close()
+
+	comm, coma := args[1], args[2:]
+	resp, err := redis.String(conn.Do(comm, coma...))
+	if err != nil {
+		return "", errors.New("พังงงง " + comm + " " + err.Error())
+	}
+	return resp, nil
+}
