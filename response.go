@@ -312,9 +312,13 @@ func (r runRedisResponse) Do(args ...string) (string, error) {
 		s[i] = v
 	}
 
-	resp, err := redis.String(conn.Do(comm, s))
+	vals, err := redis.Values(conn.Do(comm, s))
 	if err != nil {
 		return "", errors.New("พังงงง " + comm + " " + err.Error())
+	}
+	resp := ""
+	for _, v := range vals {
+		resp += fmt.Sprint("\n", v)
 	}
 	return resp, nil
 }
