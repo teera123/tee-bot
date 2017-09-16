@@ -164,44 +164,14 @@ func (curs currencies) GetByName(name string) currency {
 	return currency{}
 }
 
-// parseURL in the form of redis://h:<pwd>@ec2-23-23-129-214.compute-1.amazonaws.com:25219
-// and return the host and password
-func parseURL(us string) (string, string, error) {
-	u, err := url.Parse(us)
-	if err != nil {
-		return "", "", err
-	}
-
-	password := ""
-	if u.User != nil {
-		password, _ = u.User.Password()
-	}
-
-	host := "localhost"
-	if u.Host != "" {
-		host = u.Host
-	}
-	return host, password, nil
-}
-
 func createRedisPool() (*redis.Pool, error) {
-	h, p, err := parseURL(os.Getenv("REDIS_URL"))
-	if err != nil {
-		return nil, err
-	}
 	pool := &redis.Pool{
 		MaxIdle:     5,
 		IdleTimeout: 5 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", h)
+			c, err := redis.DialURL(os.Getenv("REDIS_URL"))
 			if err != nil {
 				return nil, err
-			}
-			if p != "" {
-				if _, err := c.Do("AUTH", p); err != nil {
-					c.Close()
-					return nil, err
-				}
 			}
 			return c, err
 		},
