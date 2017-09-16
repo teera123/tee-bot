@@ -307,7 +307,12 @@ func (r runRedisResponse) Do(args ...string) (string, error) {
 	defer conn.Close()
 
 	comm, coma := args[1], args[2:]
-	resp, err := redis.String(conn.Do(comm, coma...))
+	s := make([]interface{}, len(coma))
+	for i, v := range coma {
+		s[i] = v
+	}
+
+	resp, err := redis.String(conn.Do(comm, s))
 	if err != nil {
 		return "", errors.New("พังงงง " + comm + " " + err.Error())
 	}
