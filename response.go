@@ -12,7 +12,6 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/leekchan/accounting"
 	"github.com/line/line-bot-sdk-go/linebot"
-	"log"
 )
 
 type textResponse interface {
@@ -114,7 +113,7 @@ func (r removeIntervalResponse) Do(args ...string) (string, error) {
 	hkey := fmt.Sprintf("%s:%s:interval", r.Source.UserID, curr)
 	skey := fmt.Sprintf("interval:%s", curr)
 
-	log.Println("remove interval:", hkey, skey)
+	fmt.Println("remove interval:", hkey, skey)
 
 	conn.Send("MULTI")
 	conn.Send("DEL", hkey)
